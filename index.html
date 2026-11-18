@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>messagey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#1c1727; --side:#140f1c; --rail:#0e0a14; --panel:#261f35; --line:#352c48;
+  --text:#ece7f5; --mute:#9a90b3; --accent:#f2d45c; --accent-ink:#1c1727; --danger:#ff7a8a; --ok:#6fe3a5;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#faf7ff; --side:#efe9fb; --rail:#e2d9f5; --panel:#ffffff; --line:#d8cdee; --text:#241c36; --mute:#6c6285; --accent:#5b3fd1; --accent-ink:#fff; --danger:#c8283f; --ok:#12804b;}
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.45}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+
+.screen{min-height:100%;display:grid;place-items:center;padding:24px}
+.card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:32px}
+.card.wide{max-width:560px}
+.logo{font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1;margin:0 0 6px}
+.logo i{font-style:normal;color:var(--accent)}
+.sub{color:var(--mute);margin:0 0 20px}
+label{display:block;font-size:14px;color:var(--mute);margin:14px 0 4px}
+input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.btn{width:100%;margin-top:22px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:11px;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:wait}
+.link{background:none;border:0;color:var(--mute);cursor:pointer;margin:14px 14px 0 0;padding:0;text-decoration:underline}
+.msg{margin-top:14px;font-size:14px;min-height:20px}
+.msg.err{color:var(--danger)} .msg.ok{color:var(--ok)}
+details{margin-top:18px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+summary{cursor:pointer;font-weight:600}
+pre{max-height:220px;overflow:auto;background:var(--bg);border-radius:8px;padding:12px;font-size:12px;line-height:1.5;margin:12px 0 8px;white-space:pre}
+.small{width:auto;margin:0;padding:7px 14px}
+
+#app{height:100%;display:grid;grid-template-columns:240px 1fr 200px}
+aside{background:var(--side);display:flex;flex-direction:column;min-height:0}
+.brand{padding:16px 18px;font-weight:800;font-size:24px;letter-spacing:-.03em;border-bottom:1px solid var(--line)}
+.brand i{font-style:normal;color:var(--accent)}
+.sec{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 6px;color:var(--mute);font-size:14px;font-weight:600}
+.sec button{background:none;border:1px solid var(--line);border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--mute)}
+.sec button:hover{color:var(--text);border-color:var(--mute)}
+#channels,#online{list-style:none;margin:0;padding:0 10px;overflow:auto;flex:1}
+#channels button{width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:7px 10px;color:var(--mute);cursor:pointer}
+#channels button:hover{background:var(--rail);color:var(--text)}
+#channels button[aria-current="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+#online li{padding:5px 10px;color:var(--mute);display:flex;gap:8px;align-items:center}
+#online li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.me{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.me span{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me button{background:none;border:0;color:var(--mute);cursor:pointer;text-decoration:underline}
+main{display:flex;flex-direction:column;min-height:0;min-width:0}
+header.top{padding:16px 22px;border-bottom:1px solid var(--line);font-weight:600;font-size:18px}
+#feed{flex:1;overflow:auto;padding:12px 22px}
+.m{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:8px 0}
+.av{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#1c1727}
+.who{font-weight:600}.when{color:var(--mute);font-size:13px;margin-left:8px}
+.body{white-space:pre-wrap;overflow-wrap:anywhere}
+.m .del{background:none;border:0;color:var(--mute);cursor:pointer;font-size:13px;margin-left:8px;opacity:0}
+.m:hover .del,.m .del:focus-visible{opacity:1}
+.empty{color:var(--mute);padding:40px 0;text-align:center}
+#send{display:flex;gap:10px;padding:14px 22px 20px}
+#send button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:0 18px;font-weight:600;cursor:pointer}
+@media (max-width:860px){#app{grid-template-columns:200px 1fr}#right{display:none}}
+@media (max-width:560px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside#left{max-height:150px}.brand,.me{display:none}}
+@media (prefers-reduced-motion:no-preference){.m.new{animation:pop .25s ease-out}@keyframes pop{from{background:color-mix(in srgb,var(--accent) 18%,transparent)}}}
+</style>
+</head>
+<body>
+
+<section id="auth" class="screen hidden">
+  <form class="card" id="authForm">
+    <h1 class="logo">message<i>y</i></h1>
+    <p class="sub" id="authSub">Sign in to join the conversation.</p>
+    <div id="nameRow" class="hidden"><label for="username">Username</label><input id="username" autocomplete="username" maxlength="24"></div>
+    <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
+    <label for="password">Password</label><input id="password" type="password" minlength="6" autocomplete="current-password" required>
+    <button class="btn" id="authBtn">Sign in</button>
+    <div class="msg" id="authMsg" role="status"></div>
+    <button type="button" class="link" id="toggle">New here? Create an account</button>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <aside id="left">
+    <div class="brand">message<i>y</i></div>
+    <div class="sec">Channels <button id="addCh" title="Create channel" aria-label="Create channel">+</button></div>
+    <ul id="channels"></ul>
+    <div class="me"><span id="meName"></span><button id="out">Sign out</button></div>
+  </aside>
+  <main>
+    <header class="top" id="chTitle"></header>
+    <div id="feed" aria-live="polite"></div>
+    <form id="send"><input id="text" placeholder="Write a message" maxlength="2000" autocomplete="off" aria-label="Message"><button>Send</button></form>
+  </main>
+  <aside id="right"><div class="sec">Online now</div><ul id="online"></ul></aside>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const show = id => ["auth", "app"].forEach(s => $(s).classList.toggle("hidden", s !== id));
+
+let sb = null, me = null, profiles = {}, channels = [], current = null, msgSub = null, chSub = null, presence = null, signup = false;
+
+/* ---------- connection ---------- */
+const SUPABASE_URL = "https://iqkuujfsbtjtztnqhvgl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_sb6XLhZHDC5TSGyXD4_C7Q_sZnRKlYk";
+
+function connect() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  show("auth");
+  sb.auth.onAuthStateChange((_ev, session) => {
+    if (session && (!me || me.id !== session.user.id)) { me = session.user; start(); }
+    else if (!session) { teardown(); me = null; show("auth"); }
+  });
+}
+
+/* ---------- auth ---------- */
+$("toggle").onclick = () => {
+  signup = !signup;
+  $("nameRow").classList.toggle("hidden", !signup);
+  $("authBtn").textContent = signup ? "Create account" : "Sign in";
+  $("authSub").textContent = signup ? "Pick a username to get started." : "Sign in to join the conversation.";
+  $("toggle").textContent = signup ? "Have an account? Sign in" : "New here? Create an account";
+  $("authMsg").textContent = "";
+};
+$("authForm").onsubmit = async e => {
+  e.preventDefault();
+  const email = $("email").value.trim(), password = $("password").value, username = $("username").value.trim();
+  const msg = $("authMsg"); msg.className = "msg"; msg.textContent = "";
+  if (signup && username.length < 2) { msg.className = "msg err"; msg.textContent = "Username needs at least 2 characters."; return; }
+  $("authBtn").disabled = true;
+  const { data, error } = signup
+    ? await sb.auth.signUp({ email, password, options: { data: { username } } })
+    : await sb.auth.signInWithPassword({ email, password });
+  $("authBtn").disabled = false;
+  if (error) { msg.className = "msg err"; msg.textContent = error.message; return; }
+  if (signup && !data.session) { msg.className = "msg ok"; msg.textContent = "Check your email to confirm your account, then sign in."; }
+};
+$("out").onclick = () => sb.auth.signOut();
+
+/* ---------- app ---------- */
+async function start() {
+  show("app");
+  await loadProfiles();
+  $("meName").textContent = profiles[me.id]?.username || "you";
+  await loadChannels();
+  subscribeChannels(); joinPresence();
+  if (channels.length) openChannel(channels[0]);
+}
+function teardown() {
+  [msgSub, chSub, presence].forEach(s => s && sb.removeChannel(s));
+  msgSub = chSub = presence = current = null; profiles = {}; channels = [];
+  $("feed").replaceChildren(); $("channels").replaceChildren(); $("online").replaceChildren();
+}
+async function loadProfiles() {
+  const { data } = await sb.from("profiles").select("id, username");
+  (data || []).forEach(p => profiles[p.id] = p);
+}
+async function nameOf(id) {
+  if (!profiles[id]) await loadProfiles();
+  return profiles[id]?.username || "unknown";
+}
+async function loadChannels() {
+  const { data, error } = await sb.from("channels").select("*").order("name");
+  if (error) return alert(error.message + "\n\nHave you run the SQL setup in Supabase?");
+  channels = data; renderChannels();
+}
+function renderChannels() {
+  $("channels").replaceChildren(...channels.map(c => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.textContent = "# " + c.name; b.onclick = () => openChannel(c);
+    if (current && current.id === c.id) b.setAttribute("aria-current", "true");
+    li.append(b); return li;
+  }));
+}
+$("addCh").onclick = async () => {
+  const raw = prompt("Channel name (letters, numbers, dashes)");
+  if (!raw) return;
+  const name = raw.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 32);
+  if (!name) return alert("Use letters, numbers or dashes.");
+  const { error } = await sb.from("channels").insert({ name });
+  if (error) alert(error.code === "23505" ? "That channel already exists." : error.message);
+};
+function subscribeChannels() {
+  chSub = sb.channel("channels-feed")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "channels" }, p => {
+      if (!channels.some(c => c.id === p.new.id)) { channels.push(p.new); channels.sort((a, b) => a.name.localeCompare(b.name)); renderChannels(); }
+    }).subscribe();
+}
+
+async function openChannel(c) {
+  current = c; renderChannels();
+  $("chTitle").textContent = "# " + c.name;
+  $("text").placeholder = "Message #" + c.name;
+  if (msgSub) sb.removeChannel(msgSub);
+  const feed = $("feed"); feed.replaceChildren();
+  const { data, error } = await sb.from("messages").select("*").eq("channel_id", c.id).order("created_at", { ascending: false }).limit(100);
+  if (current.id !== c.id) return;
+  if (error) { feed.textContent = error.message; return; }
+  for (const m of data.reverse()) feed.append(await bubble(m));
+  if (!data.length) showEmpty();
+  feed.scrollTop = feed.scrollHeight;
+  msgSub = sb.channel("room-" + c.id)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "channel_id=eq." + c.id }, async p => {
+      const near = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 120;
+      feed.querySelector(".empty")?.remove();
+      feed.append(await bubble(p.new, true));
+      if (near || p.new.user_id === me.id) feed.scrollTop = feed.scrollHeight;
+    })
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, p => {
+      document.querySelector('[data-id="' + p.old.id + '"]')?.remove();
+      if (!feed.children.length) showEmpty();
+    }).subscribe();
+  $("text").focus();
+}
+function showEmpty() {
+  const d = document.createElement("div"); d.className = "empty"; d.textContent = "No messages yet. Say hello in #" + current.name + ".";
+  $("feed").append(d);
+}
+const hue = s => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+async function bubble(m, isNew) {
+  const name = await nameOf(m.user_id);
+  const el = document.createElement("div"); el.className = "m" + (isNew ? " new" : ""); el.dataset.id = m.id;
+  const av = document.createElement("div"); av.className = "av"; av.textContent = name[0].toUpperCase();
+  av.style.background = `hsl(${hue(name)} 75% 72%)`;
+  const col = document.createElement("div"), head = document.createElement("div"), body = document.createElement("div");
+  const who = document.createElement("span"); who.className = "who"; who.textContent = name;
+  const when = document.createElement("span"); when.className = "when";
+  when.textContent = new Date(m.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  head.append(who, when);
+  if (m.user_id === me.id) {
+    const d = document.createElement("button"); d.className = "del"; d.textContent = "Delete";
+    d.onclick = () => sb.from("messages").delete().eq("id", m.id);
+    head.append(d);
+  }
+  body.className = "body"; body.textContent = m.content;
+  col.append(head, body); el.append(av, col); return el;
+}
+$("send").onsubmit = async e => {
+  e.preventDefault();
+  const content = $("text").value.trim();
+  if (!content || !current) return;
+  $("text").value = "";
+  const { error } = await sb.from("messages").insert({ channel_id: current.id, content });
+  if (error) { $("text").value = content; alert(error.message); }
+};
+
+/* ---------- presence ---------- */
+function joinPresence() {
+  presence = sb.channel("online", { config: { presence: { key: me.id } } });
+  presence.on("presence", { event: "sync" }, () => {
+    const names = Object.keys(presence.presenceState()).map(id => profiles[id]?.username || "…").sort();
+    $("online").replaceChildren(...names.map(n => { const li = document.createElement("li"); li.textContent = n; return li; }));
+  }).subscribe(s => { if (s === "SUBSCRIBED") presence.track({ at: Date.now() }); });
+}
+
+connect();
+</script>
+</body>
+</html>
